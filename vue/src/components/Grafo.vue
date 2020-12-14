@@ -31,10 +31,15 @@ export default {
         {
           selector: "node",
           style: {
+            "text-valign": "center",
+            "text-halign": "right",
             "background-color": "white",
             label: "data(id)",
             shape: "square",
             "background-opacity": "0",
+            width: "8px",
+            height: "8px",
+            "font-size": "6px",
           },
         },
         {
@@ -73,10 +78,25 @@ export default {
             "target-arrow-color": "#CCCCCC",
             "target-arrow-shape": "triangle",
             label: "data(label)",
+            "font-size": "5px",
+            width: "1px",
+            "arrow-scale": 0.5,
+          },
+        },
+        {
+          selector: "edge[label]",
+          style: {
+            label: "data(label)",
+            // "text-rotation": "autorotate",
+            "text-margin-x": "-10px",
+            "text-margin-y": "0px",
+            "color": "#000000",
+            "text-outline-color": "#ffffff",
+            "text-outline-width": "1px",
           },
         },
       ],
-      layout: { name: "circle" },
+      layout: { name: "preset" },
       userZoomingEnabled: false,
     },
   }),
@@ -95,18 +115,18 @@ export default {
       if (this.grafo.nodos) {
         for (let j = 0; j < this.grafo.nodos.length; j++) {
           var nodo = this.grafo.nodos[j];
-          if (nodo != "") {
+          if (nodo.id != "") {
             elementos.push({
               classes: [
-                this.grafo.inicial.indexOf(nodo) != -1
+                this.grafo.inicial.indexOf(nodo.id) != -1
                   ? "inicial"
                   : "noInicial",
-                this.grafo.finales.indexOf(nodo) != -1 ? "final" : "noFinal",
+                this.grafo.finales.indexOf(nodo.id) != -1 ? "final" : "noFinal",
               ],
-              data: { id: nodo },
+              data: { id: nodo.id },
               position: {
-                x: 1,
-                y: 1,
+                x: nodo.ejeX,
+                y: nodo.ejeY,
               },
               group: "nodes",
             });
@@ -121,7 +141,7 @@ export default {
               id: i,
               source: arista.origen,
               target: arista.destino,
-              label: arista.alfabeto,
+              label: arista.peso,
               type: "loop",
             },
             group: "edges",
@@ -148,7 +168,7 @@ export default {
 #cytoscape-div,
 #cytoscape-div > div,
 #cytoscape-div > div > canvas {
-  min-height: 300px !important;
+  min-height: 500px !important;
   max-width: 100% !important;
   height: 100% !important;
 }
