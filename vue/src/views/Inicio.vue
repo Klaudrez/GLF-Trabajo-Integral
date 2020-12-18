@@ -265,9 +265,12 @@ export default {
     async procesarArchivo() {
       if (this.file != null) {
         this.file.text().then((text) => {
+          //console.log(this.validarTexto(text))
           if (this.validarTexto(text)) {
             var texto = [];
+            console.log(text);
             var aux = this.formatoCoord(text.split("\n"));
+            console.log(aux)
             if (this.CentrosyPuntostxt(aux)) {
               if (this.validarContenidotxt(aux)) {
                 this.centros = [];
@@ -337,7 +340,7 @@ export default {
       this.mostrarCarga = false;
       this.nuevoPunto = null;
       this.nuevoCentro = null;
-      this.numProductos = 0;
+      this.numProductos = 1;
       this.centros = [];
       this.puntos = [];
       this.puntosAux = [];
@@ -386,18 +389,20 @@ export default {
       for (let i = 0; i < txtarray.length - 1; i++)
         for (let j = i + 1; j < txtarray.length; j++) {
           if (
-            txtarray[i][1] == txtarray[j][1] &&
-            txtarray[i][0] == txtarray[j][0]
+            (txtarray[i][1] == txtarray[j][1]) &&
+            (txtarray[i][0] == txtarray[j][0])
           )
             return false;
           if (
-            txtarray[i][2] == txtarray[j][2] &&
-            txtarray[i][3] == txtarray[j][3]
-          )
-            return false;
+          (parseInt(txtarray[i][2]) == parseInt(txtarray[j][2])) &&
+          (parseInt(txtarray[i][3]) == parseInt(txtarray[j][3]))
+          ){
+          return false;
+          }
         }
       return true;
     },
+    
     CentrosyPuntostxt(txtarray) {
       var contC = 0;
       var contP = 0;
