@@ -26,7 +26,15 @@
     </v-parallax>
     <br />
     <h1 class="display-1 font-weight mb-4">Calcular hoja de ruta</h1>
-    <v-alert class="multi-line" text v-if="formatoMalo" type="error">El archivo no cumple con el formato requerido.</v-alert>
+    <v-alert class="multi-line" text v-if="formatoMalo" type="error"
+      >El archivo no cumple con el formato requerido.</v-alert
+    >
+    <v-alert class="multi-line" text v-if="duplicados" type="error"
+      >El archivo contiene puntos y/o centros duplicados.</v-alert
+    >
+    <v-alert class="multi-line" text v-if="validarCentrosPuntos" type="error"
+      >El documento carece de información de centros y/o puntos.</v-alert
+    >
     <v-row class="ma-10">
       <v-file-input
         :rules="rulesTxt"
@@ -44,7 +52,14 @@
     </v-row>
     <div v-if="mostrarCarga">
       <h1 class="display-1 font-weight mb-4">Asignar centros y puntos</h1>
-      <v-alert class="multi-line" text v-if="puntosAux.length > 0" type="warning">Asigne un centro de distribución a cada punto de venta para calcular una ruta óptima.</v-alert>
+      <v-alert
+        class="multi-line"
+        text
+        v-if="puntosAux.length > 0"
+        type="warning"
+        >Asigne un centro de distribución a cada punto de venta para calcular
+        una ruta óptima.</v-alert
+      >
       <v-row class="mr-10 ml-10">
         <v-col cols="4">
           <v-select
@@ -118,10 +133,20 @@
         </v-simple-table>
       </v-row>
       <v-row style="justify-content: center">
-        <v-btn color="primary" depressed :disabled="!puntosAux.length == 0" raised @click="boton()"
+        <v-btn
+          color="primary"
+          depressed
+          :disabled="!puntosAux.length == 0"
+          raised
+          @click="boton()"
           >Obtener ruta óptima</v-btn
         >
-        <v-btn color="primary" depressed :disabled="!resultado" raised @click="guardarArchivo()"
+        <v-btn
+          color="primary"
+          depressed
+          :disabled="!resultado"
+          raised
+          @click="guardarArchivo()"
           >Guardar ruta</v-btn
         >
       </v-row>
@@ -144,6 +169,8 @@ export default {
   components: { Grafo },
   data: () => ({
     formatoMalo: false,
+    duplicados: false,
+    validarCentrosPuntos: false,
     file: null,
     bloquearCarga: true,
     rulesTxt: [
@@ -158,8 +185,8 @@ export default {
     rutas: [],
     nuevoPunto: {},
     nuevoCentro: {},
-    numProductos: 0,
-    numValidado: 0,
+    numProductos: 1,
+    numValidado: 1,
     mostrarCarga: false,
     grafo: {},
     recargarGrafo: false,
@@ -177,6 +204,8 @@ export default {
   watch: {
     file: function () {
       this.formatoMalo = false;
+      this.duplicados = false;
+      this.validarCentrosPuntos = false;
       this.centros = [];
       this.puntos = [];
       this.puntosAux = [];
@@ -227,7 +256,10 @@ export default {
           this.rutas[i].centro.id,
         ]);
       }
-      this.rutaOptima = this.optimizarR(JSON.parse(JSON.stringify(this.texto)), pedidos)
+      this.rutaOptima = this.optimizarR(
+        JSON.parse(JSON.stringify(this.texto)),
+        pedidos
+      );
       this.resultado = this.rutaOptima != "" ? true : false;
     },
     async procesarArchivo() {
@@ -236,30 +268,50 @@ export default {
           if (this.validarTexto(text)) {
             var texto = [];
             var aux = this.formatoCoord(text.split("\n"));
-            this.centros = [];
-            this.puntos = [];
-            for (var i = 0; i < aux.length; i++) {
-              console.log("aux", aux[i]);
-              aux[i]["id"] = aux[i][0] + aux[i][1];
-              if (aux[i][0] == "C") {
-                this.centros.push(aux[i]);
-              } else if (aux[i][0] == "P") {
-                this.puntos.push(aux[i]);
-                this.puntosAux.push(aux[i]);
+            if (this.CentrosyPuntostxt(aux)) {
+              if (this.validarContenidotxt(aux)) {
+                this.centros = [];
+                this.puntos = [];
+                for (var i = 0; i < aux.length; i++) {
+                  console.log("aux", aux[i]);
+                  aux[i]["id"] = aux[i][0] + aux[i][1];
+                  if (aux[i][0] == "C") {
+                    this.centros.push(aux[i]);
+                  } else if (aux[i][0] == "P") {
+                    this.puntos.push(aux[i]);
+                    this.puntosAux.push(aux[i]);
+                  }
+                  texto.push([
+                    aux[i][0],
+                    aux[i]["id"],
+                    parseInt(aux[i][2]),
+                    parseInt(aux[i][3]),
+                  ]);
+                }
+                console.log("textoooo", texto);
+                this.texto = [...texto];
+                this.mostrarCarga = true;
+                this.formatoMalo = false;
+              } else {
+                this.duplicados = true;
+                this.$store.commit("writeLog", {
+                  level: "info",
+                  message: "El archivo tiene líneas duplicadas",
+                });
               }
-              texto.push([
-                aux[i][0],
-                aux[i]["id"],
-                parseInt(aux[i][2]),
-                parseInt(aux[i][3]),
-              ]);
+            } else {
+              this.validarCentrosPuntos = true;
+              this.$store.commit("writeLog", {
+                level: "info",
+                message: "El archivo carece de centros y/o puntos",
+              });
             }
-            console.log("textoooo", texto);
-            this.texto = [...texto];
-            this.mostrarCarga = true;
-            this.formatoMalo = false;
           } else {
-          this.formatoMalo = true;
+            this.formatoMalo = true;
+            this.$store.commit("writeLog", {
+              level: "info",
+              message: "El formato del archivo es incorrecto",
+            });
           }
         });
       }
@@ -299,7 +351,7 @@ export default {
     validarNum(e) {
       if (!isNaN(parseInt(e.key))) {
         this.numProductos =
-          this.numProductos <= 1000 && this.numProductos >= 0
+          this.numProductos <= 1000 && this.numProductos > 0
             ? this.numProductos
             : this.numValidado;
         this.numValidado = this.numProductos;
@@ -359,8 +411,8 @@ export default {
     minMax() {
       if (this.numProductos > 1000) {
         this.numProductos = 1000;
-      } else if (this.numProductos < 0) {
-        this.numProductos = 0;
+      } else if (this.numProductos < 1) {
+        this.numProductos = 1;
       }
     },
     Centros(txt) {
@@ -619,7 +671,7 @@ export default {
       var str = "";
       for (let i = 0; i < ruta.length; i++) {
         str +=
-           "Camión " +
+          "Camión " +
           idcamion +
           "\n\n" +
           this.struta(ruta[i][2], p, c) +
