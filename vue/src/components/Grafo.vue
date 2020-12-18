@@ -37,8 +37,10 @@ export default {
             label: "data(id)",
             shape: "square",
             "background-opacity": "0",
-            width: "8px",
-            height: "8px",
+            "max-width": "8% !important",
+            "max-height": "8% !important",
+            "min-width": "2% !important",
+            "min-height": "2% !important",
             "font-size": "6px",
           },
         },
@@ -78,9 +80,9 @@ export default {
             "target-arrow-color": "#CCCCCC",
             "target-arrow-shape": "triangle",
             label: "data(label)",
-            "font-size": "5px",
-            width: "1px",
-            "arrow-scale": 0.5,
+            // "font-size": "5px",
+            // width: "1px",
+            // "arrow-scale": 0.5,
           },
         },
         {
@@ -105,6 +107,9 @@ export default {
       this.$nextTick(() => {
         const cy = this.$refs.cy.instance;
         this.afterCreated(cy);
+        cy.fit(/*eles, padding*/); // Pan and zoom fitted to the tree
+cy.center(/*eles*/); // Moves the graph to the exact center of your tree
+// cy.elements().shift('x', offset); // Moves the nodes to the right, offset 
       });
     },
   },
@@ -161,7 +166,7 @@ export default {
 </script>
 
 <style>
-#cytoscape-div {
+/* #cytoscape-div {
   min-height: 100px;
   height: 100%;
 }
@@ -171,5 +176,5 @@ export default {
   min-height: 500px !important;
   max-width: 100% !important;
   height: 100% !important;
-}
+} */
 </style>

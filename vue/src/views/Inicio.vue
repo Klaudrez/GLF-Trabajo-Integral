@@ -26,6 +26,7 @@
     </v-parallax>
     <br />
     <h1 class="display-1 font-weight mb-4">Calcular hoja de ruta</h1>
+    <v-alert class="multi-line" text v-if="formatoMalo" type="error">El archivo no cumple con el formato requerido.</v-alert>
     <v-row class="ma-10">
       <v-file-input
         :rules="rulesTxt"
@@ -43,6 +44,7 @@
     </v-row>
     <div v-if="mostrarCarga">
       <h1 class="display-1 font-weight mb-4">Asignar centros y puntos</h1>
+      <v-alert class="multi-line" text v-if="puntosAux.length > 0" type="warning">Asigne un centro de distribución a cada punto de venta para calcular una ruta óptima.</v-alert>
       <v-row class="mr-10 ml-10">
         <v-col cols="4">
           <v-select
@@ -116,14 +118,17 @@
         </v-simple-table>
       </v-row>
       <v-row style="justify-content: center">
-        <v-btn color="primary" depressed raised @click="boton()"
-          >Ver ruta optimizada</v-btn
+        <v-btn color="primary" depressed :disabled="!puntosAux.length == 0" raised @click="boton()"
+          >Obtener ruta óptima</v-btn
         >
-        <!-- <v-btn color="primary" depressed raised @click="verGrafo = false"
-        >AAAAAn't</v-btn
-      > -->
+        <v-btn color="primary" depressed :disabled="!resultado" raised @click="guardarArchivo()"
+          >Guardar ruta</v-btn
+        >
       </v-row>
-      <div v-if="verGrafo">
+      <v-alert class="multi-line" text v-if="resultado" type="success">{{
+        rutaOptima
+      }}</v-alert>
+      <div v-if="false">
         <Grafo :key="recargarGrafo" :grafo="grafo" />
       </div>
     </div>
@@ -132,11 +137,13 @@
 
 <script>
 import Grafo from "../components/Grafo.vue";
+import { saveAs } from "file-saver";
 
 export default {
   name: "Home",
   components: { Grafo },
   data: () => ({
+    formatoMalo: false,
     file: null,
     bloquearCarga: true,
     rulesTxt: [
@@ -158,21 +165,8 @@ export default {
     recargarGrafo: false,
     verGrafo: false,
     texto: [],
-    txt: [
-      ["C", "c1", 1, 1],
-      ["P", "p1", 3, 2],
-      ["P", "p2", 4, 1],
-      ["P", "p3", 3, 0],
-      ["P", "p4", -1, 3],
-      ["P", "p5", -2, 2],
-    ],
-    user: [
-      ["p1", 200, "c1"],
-      ["p2", 200, "c1"],
-      ["p3", 200, "c1"],
-      ["p4", 200, "c1"],
-      ["p5", 200, "c1"],
-    ],
+    resultado: false,
+    rutaOptima: "",
   }),
   mounted() {
     this.$store.commit("writeLog", {
@@ -182,10 +176,14 @@ export default {
   },
   watch: {
     file: function () {
+      this.formatoMalo = false;
       this.centros = [];
       this.puntos = [];
       this.puntosAux = [];
       this.rutas = [];
+      this.grafo = {};
+      this.resultado = false;
+      this.rutaOptima = "";
       this.mostrarCarga = false;
       if (this.file != undefined) {
         if (this.file.type != "text/plain") {
@@ -206,28 +204,31 @@ export default {
     },
   },
   methods: {
+    guardarArchivo() {
+      var blob = new Blob([this.rutaOptima], {
+        type: "text/plain;charset=utf-8",
+      });
+      saveAs(blob, "ruta-optimizada.txt");
+    },
     eliminarItem(item) {
       this.puntosAux.push(this.rutas[item].punto);
       this.rutas.splice(item, 1);
+      this.resultado = false;
     },
     boton() {
       this.crearGrafo(this.rutas);
-      console.log("rutas", this.rutas);
-      console.log("puntos", this.puntos);
-      console.log("texto", this.texto);
       this.recargarGrafo = !this.recargarGrafo;
       this.verGrafo = true;
       var pedidos = [];
       for (var i = 0; i < this.rutas.length; i++) {
-        pedidos.push([this.rutas[i].punto.id, this.rutas[i].num, this.rutas[i].centro.id]);
+        pedidos.push([
+          this.rutas[i].punto.id,
+          this.rutas[i].num,
+          this.rutas[i].centro.id,
+        ]);
       }
-      console.log("pedidos", pedidos);
-      // console.log("---------------------");
-      // this.optimizarR(JSON.parse(JSON.stringify(this.txt)), JSON.parse(JSON.stringify(this.user)));
-      // console.log("---------------------");
-      // this.optimizarR(JSON.parse(JSON.stringify(this.texto)), pedidos);
-      console.log("ruta optimizada", this.optimizarR(JSON.parse(JSON.stringify(this.texto)), pedidos))
-      console.log("grafo", this.grafo);
+      this.rutaOptima = this.optimizarR(JSON.parse(JSON.stringify(this.texto)), pedidos)
+      this.resultado = this.rutaOptima != "" ? true : false;
     },
     async procesarArchivo() {
       if (this.file != null) {
@@ -246,11 +247,19 @@ export default {
                 this.puntos.push(aux[i]);
                 this.puntosAux.push(aux[i]);
               }
-              texto.push([aux[i][0], aux[i]['id'], parseInt(aux[i][2]), parseInt(aux[i][3])]);
+              texto.push([
+                aux[i][0],
+                aux[i]["id"],
+                parseInt(aux[i][2]),
+                parseInt(aux[i][3]),
+              ]);
             }
             console.log("textoooo", texto);
-            this.texto =[...texto];
+            this.texto = [...texto];
             this.mostrarCarga = true;
+            this.formatoMalo = false;
+          } else {
+          this.formatoMalo = true;
           }
         });
       }
@@ -271,6 +280,7 @@ export default {
       return resultado;
     },
     limpiar() {
+      this.formatoMalo = false;
       this.file = null;
       this.mostrarCarga = false;
       this.nuevoPunto = null;
@@ -312,9 +322,38 @@ export default {
         this.numProductos = 0;
       }
     },
-    validarTexto(strtxt) {
-      let valtxt = /^(C|P){1};[a-zA-Z0-9]+;-?[0-9]+,-?[0-9]+(\n(C|P){1};[a-zA-Z0-9]+;-?[0-9]+,-?[0-9]+)*$/gm;
+    validarTexto(
+      strtxt //lee el txt en formato string
+    ) {
+      let valtxt = /^(C|P){1};[0-9]+;-?[0-9]+,-?[0-9]+(\n(C|P){1};[0-9]+;-?[0-9]+,-?[0-9]+)*$/gm;
+      // console.log(this.formatoCoord(lineas));
       if (valtxt.test(strtxt)) return true;
+      return false;
+    },
+    validarContenidotxt(txtarray) {
+      for (let i = 0; i < txtarray.length - 1; i++)
+        for (let j = i + 1; j < txtarray.length; j++) {
+          if (
+            txtarray[i][1] == txtarray[j][1] &&
+            txtarray[i][0] == txtarray[j][0]
+          )
+            return false;
+          if (
+            txtarray[i][2] == txtarray[j][2] &&
+            txtarray[i][3] == txtarray[j][3]
+          )
+            return false;
+        }
+      return true;
+    },
+    CentrosyPuntostxt(txtarray) {
+      var contC = 0;
+      var contP = 0;
+      for (let i = 0; i < txtarray.length; i++) {
+        if (txtarray[i][0] == "C") contC++;
+        if (txtarray[i][0] == "P") contP++;
+      }
+      if (contC != 0 && contP != 0) return true;
       return false;
     },
     minMax() {
@@ -326,41 +365,30 @@ export default {
     },
     Centros(txt) {
       var centros = [];
-      for (let i = 0; i < txt.length; i++) {
-        if (txt[i][0] == "C") {
-          centros.push(txt[i].splice(1)); //no guarda el tipo de dato, ya que el arreglo solo tendria un tipo (C o P)
-        }
-      }
+      for (let i = 0; i < txt.length; i++)
+        if (txt[i][0] == "C") centros.push(txt[i].splice(1)); //no guarda el tipo de dato, ya que el arreglo solo tendria un tipo (C o P)
       return centros;
     },
     PuntosV(txt) {
       var puntosv = [];
-      for (let i = 0; i < txt.length; i++) {
-        if (txt[i][0] == "P") {
-          puntosv.push(txt[i].splice(1)); //no guarda el tipo de dato, ya que el arreglo solo tendria un tipo (C o P)
-        }
-      }
+      for (let i = 0; i < txt.length; i++)
+        if (txt[i][0] == "P") puntosv.push(txt[i].splice(1)); //no guarda el tipo de dato, ya que el arreglo solo tendria un tipo (C o P)
       return puntosv;
     },
     AsociarCtoP(pedido, puntosv) {
-      for (let i = 0; i < pedido.length; i++) {
-        for (let j = 0; j < puntosv.length; j++) {
+      for (let i = 0; i < pedido.length; i++)
+        for (let j = 0; j < puntosv.length; j++)
           if (pedido[i][0] == puntosv[j][0]) {
             puntosv[j].push(pedido[i][2]); //Asocia el centro y la cantidad a despachar
             puntosv[j].push(pedido[i][1]);
             puntosv[j].push(0);
           }
-        }
-      }
       return puntosv;
     },
     ValuePedidos(distribucion, centro) {
       var P = [];
-      for (let i = 0; i < distribucion.length; i++) {
-        if (centro == distribucion[i][2]) {
-          P.push(distribucion[i][1]);
-        }
-      }
+      for (let i = 0; i < distribucion.length; i++)
+        if (centro[0] == distribucion[i][2]) P.push(distribucion[i][1]);
       return P;
     },
     camionesmin(pedidos) {
@@ -370,9 +398,7 @@ export default {
         pedidos.splice(pedidos.indexOf(max), 1);
         var psumas = [];
         for (let i = 0; i < pedidos.length; i++) {
-          if (max + pedidos[i] <= 1000) {
-            psumas.push(pedidos[i]);
-          }
+          if (max + pedidos[i] <= 1000) psumas.push(pedidos[i]);
         }
         if (psumas.length > 0) {
           pedidos.splice(pedidos.indexOf(Math.max(...psumas)), 1);
@@ -404,11 +430,8 @@ export default {
     },
     PuntosVdeC(centro, puntosv) {
       var np = 0;
-      for (let i = 0; i < puntosv.length; i++) {
-        if (puntosv[i].includes(centro)) {
-          np++;
-        }
-      }
+      for (let i = 0; i < puntosv.length; i++)
+        if (puntosv[i].includes(centro)) np++;
       return np;
     },
     DistanciaPyP(punto1, punto2) {
@@ -568,12 +591,52 @@ export default {
       }
       return rutas[indice];
     },
+    cantidadporruta(ruta, p, c) {
+      var total = 0;
+      for (
+        let i = 1;
+        i < ruta.length - 1;
+        i++ //recorriendo solo los puntos de venta
+      )
+        total += this.PuntoporID(ruta[i], p, c)[4];
+      return total;
+    },
+    struta(ruta, c, p) {
+      var str = "";
+      for (let i = 0; i < ruta.length; i++) {
+        if (this.PuntoporID(ruta[i], p, c) != undefined) {
+          if (this.PuntoporID(ruta[i], p, c)[4] != undefined)
+            str += ruta[i] + ": -" + this.PuntoporID(ruta[i], p, c)[4] + "\n";
+          else str += ruta[i] + ": +" + this.cantidadporruta(ruta, p, c) + "\n";
+        } else str += ruta[i] + ": 0\n\n";
+      }
+      return str;
+    },
+    cincodecimales(numero) {
+      return Number.parseFloat(numero).toFixed(5);
+    },
+    strhdr(ruta, idcamion, p, c) {
+      var str = "";
+      for (let i = 0; i < ruta.length; i++) {
+        str +=
+           "Camión " +
+          idcamion +
+          "\n\n" +
+          this.struta(ruta[i][2], p, c) +
+          this.cincodecimales(ruta[i][0]) +
+          " KM " +
+          (1000 - ruta[i][1]) +
+          " Unidades\n\n";
+        idcamion[0]++;
+      }
+      return str;
+    },
     optimizarR(datos, pedidos) {
       var centros = this.Centros(datos);
       var puntosv = this.AsociarCtoP(pedidos, this.PuntosV(datos));
-      var RoptimaGlobal = [];
-      console.log("centros", centros);
-      console.log("puntosv", puntosv);
+      var RoptimaGlobal = "";
+      var indice = [1];
+
       for (let i = 0; i < centros.length; i++) {
         var min = this.camionesmin(this.ValuePedidos(pedidos, centros[i]));
         var max = this.PuntosVdeC(centros[i][0], puntosv);
@@ -608,46 +671,8 @@ export default {
                 ["E", 0, 0]
               );
               camiones[k][2].push("E");
-            }
-            if (camiones.length == max) {
-              posactual = this.PuntoporID(
-                camiones[k][2][camiones[k][2].length - 1],
-                pvs,
-                centros
-              );
-              pcercano = this.Pmascercano(posactual, centros[i], pvs);
-              camiones[k][0] += this.DistanciaPyP(posactual, pcercano);
-              camiones[k][1] -= pcercano[4];
-              camiones[k][2].push(pcercano[0]);
-              this.CambiarEstado(pcercano, pvs);
-              camiones[k][0] += this.DistanciaPyP(
-                this.PuntoporID(
-                  camiones[k][2][camiones[k][2].length - 1],
-                  pvs,
-                  centros
-                ),
-                ["E", 0, 0]
-              );
-              camiones[k][2].push("E");
-            }
-            if (camiones.length != 1 && camiones.length != max) {
-              if (this.Pmaslejano(["E", 0, 0], centros[i], pvs) != 0) {
-                posactual = this.PuntoporID(
-                  camiones[k][2][camiones[k][2].length - 1],
-                  pvs,
-                  centros
-                );
-                var plejano = this.Pmaslejano(["E", 0, 0], centros[i], pvs);
-                camiones[k][0] += this.DistanciaPyP(posactual, plejano);
-                camiones[k][1] -= plejano[4];
-                camiones[k][2].push(plejano[0]);
-                this.CambiarEstado(plejano, pvs);
-              }
-              while (
-                this.DespachosPendientes(centros[i], pvs) &&
-                this.EntregasPosibles(camiones[k], centros[i], pvs) &&
-                this.DistanciaT(camiones[k], pvs, centros[i])
-              ) {
+            } else {
+              if (camiones.length == max) {
                 posactual = this.PuntoporID(
                   camiones[k][2][camiones[k][2].length - 1],
                   pvs,
@@ -658,18 +683,60 @@ export default {
                 camiones[k][1] -= pcercano[4];
                 camiones[k][2].push(pcercano[0]);
                 this.CambiarEstado(pcercano, pvs);
+                camiones[k][0] += this.DistanciaPyP(
+                  this.PuntoporID(
+                    camiones[k][2][camiones[k][2].length - 1],
+                    pvs,
+                    centros
+                  ),
+                  ["E", 0, 0]
+                );
+                camiones[k][2].push("E");
+              } else {
+                if (this.Pmaslejano(["E", 0, 0], centros[i], pvs) != 0) {
+                  posactual = this.PuntoporID(
+                    camiones[k][2][camiones[k][2].length - 1],
+                    pvs,
+                    centros
+                  );
+                  var plejano = this.Pmaslejano(["E", 0, 0], centros[i], pvs);
+                  camiones[k][0] += this.DistanciaPyP(posactual, plejano);
+                  camiones[k][1] -= plejano[4];
+                  camiones[k][2].push(plejano[0]);
+                  this.CambiarEstado(plejano, pvs);
+                }
+                while (
+                  this.DespachosPendientes(centros[i], pvs) &&
+                  this.EntregasPosibles(camiones[k], centros[i], pvs) &&
+                  this.DistanciaT(camiones[k], pvs, centros[i])
+                ) {
+                  posactual = this.PuntoporID(
+                    camiones[k][2][camiones[k][2].length - 1],
+                    pvs,
+                    centros
+                  );
+                  pcercano = this.Pmascercano(posactual, centros[i], pvs);
+                  camiones[k][0] += this.DistanciaPyP(posactual, pcercano);
+                  camiones[k][1] -= pcercano[4];
+                  camiones[k][2].push(pcercano[0]);
+                  this.CambiarEstado(pcercano, pvs);
+                }
               }
             }
           }
+
           this.pedidospendientes(camiones, pvs, centros[i], centros);
           //console.log(camiones.length+": ",camiones)
           if (!this.DespachosPendientes(centros[i], pvs)) {
             RoptimaCentro.push(camiones);
           }
-          // console.log("ruta optima centro", RoptimaCentro);
         }
-        RoptimaGlobal.push(this.RutaOptima(RoptimaCentro));
-        // console.log("ruta optima global", RoptimaGlobal);
+        RoptimaGlobal += this.strhdr(
+          this.RutaOptima(RoptimaCentro),
+          indice,
+          puntosv,
+          centros
+        );
       }
       return RoptimaGlobal;
     },
@@ -718,5 +785,8 @@ export default {
 table td,
 table th {
   vertical-align: middle !important;
+}
+.multi-line {
+  white-space: pre-line;
 }
 </style>
