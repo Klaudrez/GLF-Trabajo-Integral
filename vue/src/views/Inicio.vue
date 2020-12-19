@@ -55,10 +55,17 @@
       <v-alert
         class="multi-line"
         text
-        v-if="puntosAux.length > 0"
+        v-if="puntosAux.length >= puntos.length"
         type="warning"
-        >Asigne un centro de distribución a cada punto de venta para calcular
-        una ruta óptima.</v-alert
+        >Asigne al menos un centro de distribución a un punto de venta para calcular una
+        ruta óptima.</v-alert
+      >
+      <v-alert
+        class="multi-line"
+        text
+        v-if="alertaVacio"
+        type="error"
+        >Hay un o más campos vacíos. Intente nuevamente.</v-alert
       >
       <v-row class="mr-10 ml-10">
         <v-col cols="4">
@@ -96,7 +103,7 @@
         </v-col>
 
         <v-col cols="2">
-          <v-btn color="primary" block depressed raised @click="agregarRuta"
+          <v-btn color="primary" :disabled="puntosAux.length == 0" block depressed raised @click="agregarRuta"
             >+ Agregar</v-btn
           >
         </v-col>
@@ -107,10 +114,10 @@
           <template v-slot:default>
             <thead>
               <tr>
-                <th class="text-left" scope="col" >Centro de distribución</th>
-                <th class="text-left" scope="col" >Punto de venta</th>
-                <th class="text-left" scope="col" >N° productos</th>
-                <th class="text-left" scope="col" ></th>
+                <th class="text-left" scope="col">Centro de distribución</th>
+                <th class="text-left" scope="col">Punto de venta</th>
+                <th class="text-left" scope="col">N° productos</th>
+                <th class="text-left" scope="col"></th>
               </tr>
             </thead>
             <tbody>
@@ -136,7 +143,7 @@
         <v-btn
           color="primary"
           depressed
-          :disabled="!puntosAux.length == 0"
+          :disabled="!puntosAux.length == puntos.length"
           raised
           @click="boton()"
           >Obtener ruta óptima</v-btn
@@ -194,6 +201,7 @@ export default {
     texto: [],
     resultado: false,
     rutaOptima: "",
+    alertaVacio: false,
   }),
   mounted() {
     this.$store.commit("writeLog", {
@@ -203,6 +211,7 @@ export default {
   },
   watch: {
     file: function () {
+      this.alertaVacio = false;
       this.formatoMalo = false;
       this.duplicados = false;
       this.validarCentrosPuntos = false;
@@ -269,7 +278,7 @@ export default {
           if (this.validarTexto(text)) {
             var texto = [];
             var aux = this.formatoCoord(text.trim().split("\n"));
-            console.log(aux)
+            console.log(aux);
             if (this.CentrosyPuntostxt(aux)) {
               if (this.validarContenidotxt(aux)) {
                 this.centros = [];
@@ -295,9 +304,9 @@ export default {
                 this.mostrarCarga = true;
                 this.formatoMalo = false;
                 this.$store.commit("writeLog", {
-                level: "info",
-                message: "Se cargo el archivo correctamente",
-            });
+                  level: "info",
+                  message: "Se cargo el archivo correctamente",
+                });
               } else {
                 this.duplicados = true;
                 this.$store.commit("writeLog", {
@@ -325,7 +334,7 @@ export default {
     formatoCoord(array) {
       var resultado = [];
       for (let i = 0; i < array.length; i++) {
-        if(array[i].length > 1){
+        if (array[i].length > 1) {
           var aux = array[i].split(";");
           resultado.push(this.añadirT(aux[0], aux[1], aux[2].split(",")));
         }
@@ -340,6 +349,7 @@ export default {
       return resultado;
     },
     limpiar() {
+      this.alertaVacio = false;
       this.formatoMalo = false;
       this.file = null;
       this.mostrarCarga = false;
@@ -366,11 +376,12 @@ export default {
       }
     },
     agregarRuta() {
-      if(this.nuevoPunto!=null && this.nuevoCentro!=null){
+      this.alertaVacio = false;
+      if (this.nuevoPunto != null && this.nuevoCentro != null) {
         if (
           Object.keys(this.nuevoPunto).length != 0 &&
           Object.keys(this.nuevoCentro).length != 0 &&
-          this.numProductos >= 0
+          this.numProductos > 0
         ) {
           this.rutas.push({
             punto: this.nuevoPunto,
@@ -378,21 +389,34 @@ export default {
             num: parseInt(this.numProductos),
           });
           this.$store.commit("writeLog", {
-                level: "info",
-                message: "se ingreso el pedido en el punto : " + this.nuevoPunto +
-                "  desde el centro : "+ this.nuevoCentro + "  solicitando : " + 
-                this.numProductos + " productos",
-              });
+            level: "info",
+            message:
+              "Se ingreso el pedido en el punto : " +
+              this.nuevoPunto +
+              "  desde el centro : " +
+              this.nuevoCentro +
+              "  solicitando : " +
+              this.numProductos +
+              " productos",
+          });
+        } else {
+          this.$store.commit("writeLog", {
+            level: "info",
+            message: "Hay campos vacios",
+          });
+          this.alertaVacio = true;
         }
-          this.puntosAux.splice(this.puntosAux.indexOf(this.nuevoPunto), 1);
-          this.nuevoCentro = null;
-          this.nuevoPunto = null;
-          this.numProductos = 1;
+        this.puntosAux.splice(this.puntosAux.indexOf(this.nuevoPunto), 1);
+        this.nuevoCentro = null;
+        this.nuevoPunto = null;
+        this.numProductos = 1;
+      } else {
+        this.$store.commit("writeLog", {
+          level: "info",
+          message: "Hay campos vacios",
+        });
+        this.alertaVacio = true;
       }
-      this.$store.commit("writeLog", {
-                level: "info",
-                message: "Hay campos vacios",
-              });
     },
     validarTexto(
       strtxt //lee el txt en formato string
@@ -405,20 +429,20 @@ export default {
       for (let i = 0; i < txtarray.length - 1; i++)
         for (let j = i + 1; j < txtarray.length; j++) {
           if (
-            (txtarray[i][1] == txtarray[j][1]) &&
-            (txtarray[i][0] == txtarray[j][0])
+            txtarray[i][1] == txtarray[j][1] &&
+            txtarray[i][0] == txtarray[j][0]
           )
             return false;
           if (
-          (parseInt(txtarray[i][2]) == parseInt(txtarray[j][2])) &&
-          (parseInt(txtarray[i][3]) == parseInt(txtarray[j][3]))
-          ){
-          return false;
+            parseInt(txtarray[i][2]) == parseInt(txtarray[j][2]) &&
+            parseInt(txtarray[i][3]) == parseInt(txtarray[j][3])
+          ) {
+            return false;
           }
         }
       return true;
     },
-    
+
     CentrosyPuntostxt(txtarray) {
       var contC = 0;
       var contP = 0;
@@ -712,16 +736,22 @@ export default {
 
       for (let i = 0; i < centros.length; i++) {
         this.$store.commit("writeLog", {
-              level: "info",
-              message: "calculando las rutas para el centro : " + centros[i][0] +" ... " ,
-            });
+          level: "info",
+          message:
+            "calculando las rutas para el centro : " + centros[i][0] + " ... ",
+        });
         var min = this.camionesmin(this.ValuePedidos(pedidos, centros[i]));
         var max = this.PuntosVdeC(centros[i][0], puntosv);
         var RoptimaCentro = [];
         this.$store.commit("writeLog", {
-              level: "info",
-              message: "calculando las rutas usando desde : " + min +" hasta : "+  max + " camion(es)",
-            });
+          level: "info",
+          message:
+            "calculando las rutas usando desde : " +
+            min +
+            " hasta : " +
+            max +
+            " camion(es)",
+        });
         for (let j = min; j <= max; j++) {
           var camiones = this.camion(j, centros[i]);
           var pvs = this.copiarpvs(puntosv);
@@ -812,13 +842,15 @@ export default {
           }
         }
         this.$store.commit("writeLog", {
-              level: "info",
-              message: "se encontraron las rutas mas optimas para el centro, " +  centros[i][0] ,
-            });
+          level: "info",
+          message:
+            "se encontraron las rutas mas optimas para el centro, " +
+            centros[i][0],
+        });
         this.$store.commit("writeLog", {
-              level: "info",
-              message: "se añadio la ruta mas optima a la hoja de rutas " ,
-            });
+          level: "info",
+          message: "se añadio la ruta mas optima a la hoja de rutas ",
+        });
         RoptimaGlobal += this.strhdr(
           this.RutaOptima(RoptimaCentro),
           indice,
@@ -827,9 +859,9 @@ export default {
         );
       }
       this.$store.commit("writeLog", {
-              level: "info",
-              message: "se encontraron las rutas mas optimas para todos los centros " ,
-            });
+        level: "info",
+        message: "se encontraron las rutas mas optimas para todos los centros ",
+      });
       return RoptimaGlobal;
     },
     crearGrafo(listaPuntos) {
