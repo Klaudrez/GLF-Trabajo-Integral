@@ -107,10 +107,10 @@
           <template v-slot:default>
             <thead>
               <tr>
-                <th class="text-left">Centro de distribución</th>
-                <th class="text-left">Punto de venta</th>
-                <th class="text-left">N° productos</th>
-                <th class="text-left"></th>
+                <th class="text-left" scope="col" >Centro de distribución</th>
+                <th class="text-left" scope="col" >Punto de venta</th>
+                <th class="text-left" scope="col" >N° productos</th>
+                <th class="text-left" scope="col" ></th>
               </tr>
             </thead>
             <tbody>
@@ -268,8 +268,7 @@ export default {
           //console.log(this.validarTexto(text))
           if (this.validarTexto(text)) {
             var texto = [];
-            console.log(text);
-            var aux = this.formatoCoord(text.split("\n"));
+            var aux = this.formatoCoord(text.trim().split("\n"));
             console.log(aux)
             if (this.CentrosyPuntostxt(aux)) {
               if (this.validarContenidotxt(aux)) {
@@ -322,8 +321,10 @@ export default {
     formatoCoord(array) {
       var resultado = [];
       for (let i = 0; i < array.length; i++) {
-        var aux = array[i].split(";");
-        resultado.push(this.añadirT(aux[0], aux[1], aux[2].split(",")));
+        if(array[i].length > 1){
+          var aux = array[i].split(";");
+          resultado.push(this.añadirT(aux[0], aux[1], aux[2].split(",")));
+        }
       }
       return resultado;
     },
@@ -374,14 +375,13 @@ export default {
         this.puntosAux.splice(this.puntosAux.indexOf(this.nuevoPunto), 1);
         this.nuevoCentro = null;
         this.nuevoPunto = null;
-        this.numProductos = 0;
+        this.numProductos = 1;
       }
     },
     validarTexto(
       strtxt //lee el txt en formato string
     ) {
-      let valtxt = /^(C|P){1};[0-9]+;-?[0-9]+,-?[0-9]+(\n(C|P){1};[0-9]+;-?[0-9]+,-?[0-9]+)*$/gm;
-      // console.log(this.formatoCoord(lineas));
+      let valtxt = /^(C|P){1};[a-zA-Z0-9]+;-?[0-9]+,-?[0-9]+(\n(C|P){1};[a-zA-Z0-9]+;-?[0-9]+,-?[0-9]+)*$/gm;
       if (valtxt.test(strtxt)) return true;
       return false;
     },
