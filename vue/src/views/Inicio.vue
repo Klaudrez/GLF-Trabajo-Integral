@@ -730,20 +730,37 @@ export default {
       }
       return str;
     },
+    centrosdeP(pedidos)
+    {
+      var centros=[];
+      for(let i=0;i<pedidos.length;i++)
+        if(!centros.includes(pedidos[i][2]))
+          centros.push(pedidos[i][2]);
+      return centros;
+    },
+
+    ids_to_puntos(centros,p,c)
+    {
+      var r = [];
+      for(let i=0;i<centros.length;i++)
+        r.push(this.PuntoporID(centros[i],p,c));
+      return r;
+    },
     optimizarR(datos, pedidos) {
       var centros = this.Centros(datos);
       var puntosv = this.AsociarCtoP(pedidos, this.PuntosV(datos));
       var RoptimaGlobal = "";
+      var centrosP=this.ids_to_puntos(this.centrosdeP(pedidos),puntosv,centros)
       var indice = [1];
 
-      for (let i = 0; i < centros.length; i++) {
+      for (let i = 0; i < centrosP.length; i++) {
         this.$store.commit("writeLog", {
           level: "info",
           message:
-            "calculando las rutas para el centro : " + centros[i][0] + " ... ",
+            "calculando las rutas para el centro : " + centrosP[i][0] + " ... ",
         });
-        var min = this.camionesmin(this.ValuePedidos(pedidos, centros[i]));
-        var max = this.PuntosVdeC(centros[i][0], puntosv);
+        var min = this.camionesmin(this.ValuePedidos(pedidos, centrosP[i]));
+        var max = this.PuntosVdeC(centrosP[i][0], puntosv);
         var RoptimaCentro = [];
         this.$store.commit("writeLog", {
           level: "info",
@@ -755,20 +772,20 @@ export default {
             " camion(es)",
         });
         for (let j = min; j <= max; j++) {
-          var camiones = this.camion(j, centros[i]);
+          var camiones = this.camion(j, centrosP[i]);
           var pvs = this.copiarpvs(puntosv);
           for (let k = 0; k < camiones.length; k++) {
             if (camiones.length == 1) {
               while (
-                this.DespachosPendientes(centros[i], pvs) &&
-                this.EntregasPosibles(camiones[k], centros[i], pvs)
+                this.DespachosPendientes(centrosP[i], pvs) &&
+                this.EntregasPosibles(camiones[k], centrosP[i], pvs)
               ) {
                 var posactual = this.PuntoporID(
                   camiones[k][2][camiones[k][2].length - 1],
                   pvs,
-                  centros
+                  centrosP
                 );
-                var pcercano = this.Pmascercano(posactual, centros[i], pvs);
+                var pcercano = this.Pmascercano(posactual, centrosP[i], pvs);
                 camiones[k][0] += this.DistanciaPyP(posactual, pcercano);
                 camiones[k][1] -= pcercano[4];
                 camiones[k][2].push(pcercano[0]);
@@ -778,7 +795,7 @@ export default {
                 this.PuntoporID(
                   camiones[k][2][camiones[k][2].length - 1],
                   pvs,
-                  centros
+                  centrosP
                 ),
                 ["E", 0, 0]
               );
@@ -788,9 +805,9 @@ export default {
                 posactual = this.PuntoporID(
                   camiones[k][2][camiones[k][2].length - 1],
                   pvs,
-                  centros
+                  centrosP
                 );
-                pcercano = this.Pmascercano(posactual, centros[i], pvs);
+                pcercano = this.Pmascercano(posactual, centrosP[i], pvs);
                 camiones[k][0] += this.DistanciaPyP(posactual, pcercano);
                 camiones[k][1] -= pcercano[4];
                 camiones[k][2].push(pcercano[0]);
@@ -799,35 +816,35 @@ export default {
                   this.PuntoporID(
                     camiones[k][2][camiones[k][2].length - 1],
                     pvs,
-                    centros
+                    centrosP
                   ),
                   ["E", 0, 0]
                 );
                 camiones[k][2].push("E");
               } else {
-                if (this.Pmaslejano(["E", 0, 0], centros[i], pvs) != 0) {
+                if (this.Pmaslejano(["E", 0, 0], centrosP[i], pvs) != 0) {
                   posactual = this.PuntoporID(
                     camiones[k][2][camiones[k][2].length - 1],
                     pvs,
-                    centros
+                    centrosP
                   );
-                  var plejano = this.Pmaslejano(["E", 0, 0], centros[i], pvs);
+                  var plejano = this.Pmaslejano(["E", 0, 0], centrosP[i], pvs);
                   camiones[k][0] += this.DistanciaPyP(posactual, plejano);
                   camiones[k][1] -= plejano[4];
                   camiones[k][2].push(plejano[0]);
                   this.CambiarEstado(plejano, pvs);
                 }
                 while (
-                  this.DespachosPendientes(centros[i], pvs) &&
-                  this.EntregasPosibles(camiones[k], centros[i], pvs) &&
-                  this.DistanciaT(camiones[k], pvs, centros[i])
+                  this.DespachosPendientes(centrosP[i], pvs) &&
+                  this.EntregasPosibles(camiones[k], centrosP[i], pvs) &&
+                  this.DistanciaT(camiones[k], pvs, centrosP[i])
                 ) {
                   posactual = this.PuntoporID(
                     camiones[k][2][camiones[k][2].length - 1],
                     pvs,
-                    centros
+                    centrosP
                   );
-                  pcercano = this.Pmascercano(posactual, centros[i], pvs);
+                  pcercano = this.Pmascercano(posactual, centrosP[i], pvs);
                   camiones[k][0] += this.DistanciaPyP(posactual, pcercano);
                   camiones[k][1] -= pcercano[4];
                   camiones[k][2].push(pcercano[0]);
@@ -837,9 +854,9 @@ export default {
             }
           }
 
-          this.pedidospendientes(camiones, pvs, centros[i], centros);
+          this.pedidospendientes(camiones, pvs, centrosP[i], centrosP);
           //console.log(camiones.length+": ",camiones)
-          if (!this.DespachosPendientes(centros[i], pvs)) {
+          if (!this.DespachosPendientes(centrosP[i], pvs)) {
             RoptimaCentro.push(camiones);
           }
         }
@@ -847,7 +864,7 @@ export default {
           level: "info",
           message:
             "se encontraron las rutas mas optimas para el centro, " +
-            centros[i][0],
+            centrosP[i][0],
         });
         this.$store.commit("writeLog", {
           level: "info",
@@ -857,13 +874,14 @@ export default {
           this.RutaOptima(RoptimaCentro),
           indice,
           puntosv,
-          centros
+          centrosP
         );
       }
       this.$store.commit("writeLog", {
         level: "info",
-        message: "se encontraron las rutas mas optimas para todos los centros ",
+        message: "se encontraron las rutas mas optimas para todos los centros \n ------------------------------------------------------------------------------------------------- ",
       });
+      
       return RoptimaGlobal;
     },
     crearGrafo(listaPuntos) {
