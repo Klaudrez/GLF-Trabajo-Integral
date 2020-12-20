@@ -379,39 +379,49 @@ export default {
     },
     agregarRuta() {
       this.alertaVacio = false;
+      console.log(this.nuevoPunto , this.nuevoCentro)
       if (this.nuevoPunto != null && this.nuevoCentro != null) {
-        if (
-          Object.keys(this.nuevoPunto).length != 0 &&
-          Object.keys(this.nuevoCentro).length != 0 &&
-          this.numProductos > 0
-        ) {
-          this.rutas.push({
-            punto: this.nuevoPunto,
-            centro: this.nuevoCentro,
-            num: parseInt(this.numProductos),
-          });
-          this.$store.commit("writeLog", {
-            level: "info",
-            message:
-              "Se ingreso el pedido en el punto : " +
-              this.nuevoPunto +
-              "  desde el centro : " +
-              this.nuevoCentro +
-              "  solicitando : " +
-              this.numProductos +
-              " productos",
-          });
-        } else {
-          this.$store.commit("writeLog", {
-            level: "info",
-            message: "Hay campos vacios",
+        if( this.nuevoPunto.id != undefined && this.nuevoCentro.id != undefined ){
+          if (
+            Object.keys(this.nuevoPunto).length != 0 &&
+            Object.keys(this.nuevoCentro).length != 0 &&
+            this.numProductos > 0
+          ) {
+            this.rutas.push({
+              punto: this.nuevoPunto,
+              centro: this.nuevoCentro,
+              num: parseInt(this.numProductos),
+            });
+            this.$store.commit("writeLog", {
+              level: "info",
+              message:
+                "Se ingreso el pedido en el punto : " +
+                this.nuevoPunto +
+                "  desde el centro : " +
+                this.nuevoCentro +
+                "  solicitando : " +
+                this.numProductos +
+                " productos",
+            });
+          } else {
+            this.$store.commit("writeLog", {
+              level: "info",
+              message: "Hay campos vacios",
+            });
+            this.alertaVacio = true;
+          }
+          this.puntosAux.splice(this.puntosAux.indexOf(this.nuevoPunto), 1);
+          this.nuevoCentro = null;
+          this.nuevoPunto = null;
+          this.numProductos = 1;
+        }
+        else {
+        this.$store.commit("writeLog", {
+          level: "info",
+          message: "Hay campos vacios",
           });
           this.alertaVacio = true;
         }
-        this.puntosAux.splice(this.puntosAux.indexOf(this.nuevoPunto), 1);
-        this.nuevoCentro = null;
-        this.nuevoPunto = null;
-        this.numProductos = 1;
       } else {
         this.$store.commit("writeLog", {
           level: "info",
