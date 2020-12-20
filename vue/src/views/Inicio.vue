@@ -57,14 +57,10 @@
         text
         v-if="puntosAux.length >= puntos.length"
         type="warning"
-        >Asigne al menos un centro de distribución a un punto de venta para calcular una
-        ruta óptima.</v-alert
+        >Asigne al menos un centro de distribución a un punto de venta para
+        calcular una ruta óptima.</v-alert
       >
-      <v-alert
-        class="multi-line"
-        text
-        v-if="alertaVacio"
-        type="error"
+      <v-alert class="multi-line" text v-if="alertaVacio" type="error"
         >Hay un o más campos vacíos. Intente nuevamente.</v-alert
       >
       <v-row class="mr-10 ml-10">
@@ -103,7 +99,13 @@
         </v-col>
 
         <v-col cols="2">
-          <v-btn color="primary" :disabled="puntosAux.length == 0" block depressed raised @click="agregarRuta"
+          <v-btn
+            color="primary"
+            :disabled="puntosAux.length == 0"
+            block
+            depressed
+            raised
+            @click="agregarRuta"
             >+ Agregar</v-btn
           >
         </v-col>
@@ -143,7 +145,7 @@
         <v-btn
           color="primary"
           depressed
-          :disabled="!puntosAux.length == puntos.length"
+          :disabled="puntosAux.length == puntos.length"
           raised
           @click="boton()"
           >Obtener ruta óptima</v-btn
